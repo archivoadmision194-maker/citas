@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Nueva Cita</title>
+  <style>
+    :root {
+      --bg: #f7f9fc;
+      --card: #ffffff;
+      --accent: #0b6efd;
+      --muted: #6b7280;
+      --success: #16a34a;
+      --danger: #dc2626;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    body {
+      margin: 0;
+      background: linear-gradient(180deg,#eef2ff 0%, var(--bg) 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      color: #0f172a;
+    }
+    .card {
+      width: 100%;
+      max-width: 720px;
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(2,6,23,0.08);
+      padding: 1.5rem;
+    }
+    h1 { margin: 0 0 0.5rem 0; font-size: 1.25rem; }
+    p.lead { margin: 0 0 1rem 0; color: var(--muted); font-size: 0.95rem; }
+    form { display: grid; gap: 0.75rem; grid-template-columns: 1fr 1fr; }
+    .full { grid-column: 1 / -1; }
+    label { display: block; font-size: 0.85rem; margin-bottom: 0.25rem; color: #111827; }
+    input, textarea, select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.55rem 0.65rem;
+      border: 1px solid #e6e9ef;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      background: #fff;
+      color: #0f172a;
+    }
+    textarea { min-height: 100px; resize: vertical; }
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      align-items: center;
+      margin-top: 0.5rem;
+    }
+    button.primary {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.6rem 0.9rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.ghost {
+      background: transparent;
+      border: 1px solid #e6e9ef;
+      padding: 0.55rem 0.8rem;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .note { font-size: 0.85rem; color: var(--muted); }
+    .msg { padding: 0.6rem 0.75rem; border-radius: 8px; font-size: 0.95rem; display:none; }
+    .msg.success { background: #ecfdf5; color: var(--success); border: 1px solid rgba(16,185,129,0.12); display:none; }
+    .msg.error { background: #fff1f2; color: var(--danger); border: 1px solid rgba(220,38,38,0.08); display:none; }
+    @media (max-width: 640px) {
+      form { grid-template-columns: 1fr; }
+      .actions { justify-content: stretch; }
+    }
+  </style>
+</head>
+<body>
+  <main class="card" role="main">
+    <h1>Nueva cita</h1>
+    <p class="lead">Completa el formulario para solicitar una cita. Campos con * son obligatorios.</p>
+
+    <div id="msgSuccess" class="msg success" role="status" aria-live="polite"></div>
+    <div id="msgError" class="msg error" role="alert" aria-live="assertive"></div>
+
+    <form id="appointmentForm" novalidate>
+      <div>
+        <label for="nombre">Nombre completo *</label>
+        <input id="nombre" name="nombre" type="text" required placeholder="Ej. Ana Pérez" />
+      </div>
+
+      <div>
+        <label for="email">Correo electrónico *</label>
+        <input id="email" name="email" type="email" required placeholder="ejemplo@dominio.com" />
+      </div>
+
+      <div>
+        <label for="telefono">Teléfono</label>
+        <input id="telefono" name="telefono" type="tel" placeholder="+58 412 123 4567" />
+      </div>
+
+      <div>
+        <label for="tipo">Tipo de cita</label>
+        <select id="tipo" name="tipo">
+          <option value="consulta">Consulta</option>
+          <option value="seguimiento">Seguimiento</option>
+          <option value="documentacion">Documentación</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="fecha">Fecha *</label>
+        <input id="fecha" name="fecha" type="date" required />
+      </div>
+
+      <div>
+        <label for="hora">Hora *</label>
+        <input id="hora" name="hora" type="time" required />
+      </div>
+
+      <div class="full">
+        <label for="motivo">Motivo / Observaciones</label>
+        <textarea id="motivo" name="motivo" placeholder="Describe brevemente el motivo de la cita"></textarea>
+      </div>
+
+      <div class="full note">
+        <small>Revisaremos tu solicitud y te confirmaremos por correo electrónico.</small>
+      </div>
+
+      <div class="full actions">
+        <button type="button" class="ghost" id="resetBtn">Restablecer</button>
+        <button type="submit" class="primary">Solicitar cita</button>
+      </div>
+    </form>
+  </main>
+
+  <script>
+    const form = document.getElementById('appointmentForm');
+    const msgSuccess = document.getElementById('msgSuccess');
+    const msgError = document.getElementById('msgError');
+    const resetBtn = document.getElementById('resetBtn');
+
+    function showMessage(node, text) {
+      node.textContent = text;
+      node.style.display = 'block';
+      setTimeout(() => { node.style.display = 'none'; }, 6000);
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msgError.style.display = 'none';
+      msgSuccess.style.display = 'none';
+
+      // Validación simple
+      const formData = new FormData(form);
+      const nombre = formData.get('nombre')?.trim();
+      const email = formData.get('email')?.trim();
+      const fecha = formData.get('fecha');
+      const hora = formData.get('hora');
+
+      if (!nombre || !email || !fecha || !hora) {
+        showMessage(msgError, 'Por favor completa los campos obligatorios.');
+        return;
+      }
+
+      // Aquí puedes enviar los datos a tu backend (ejemplo comentado)
+      /*
+      try {
+        const resp = await fetch('/api/citas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.fromEntries(formData))
+        });
+        if (!resp.ok) throw new Error('Error del servidor');
+      } catch (err) {
+        showMessage(msgError, 'No se pudo enviar la solicitud. Intenta más tarde.');
+        return;
+      }
+      */
+
+      showMessage(msgSuccess, 'Solicitud enviada. Te contactaremos por correo para confirmar la cita.');
+      form.reset();
+    });
+
+    resetBtn.addEventListener('click', () => {
+      form.reset();
+      msgError.style.display = 'none';
+      msgSuccess.style.display = 'none';
+    });
+  </script>
+</body>
+</html>
